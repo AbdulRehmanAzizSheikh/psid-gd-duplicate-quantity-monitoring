@@ -5,3 +5,11 @@ body {
   color: #0f172a; /* slate-900 */
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
+
+/* Print / Save-as-PDF: hide toolbar + chrome for a clean quotation document */
+@media print {
+  .print-hide { display: none !important; }
+  header, footer { display: none !important; }
+  body { background: #fff !important; }
+  section { break-inside: avoid; }
+}
