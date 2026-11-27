@@ -79,10 +79,19 @@ export default function Dashboard() {
     if (vehicleFilter) params.set("vehicle", vehicleFilter);
     if (statusFilter) params.set("status", statusFilter);
     if (customsFilter) params.set("customsPaid", customsFilter);
-    const res = await fetch(`/api/entries?${params.toString()}`);
-    const json = await res.json();
-    setData(json);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/entries?${params.toString()}`);
+      const json = await res.json();
+      // Only replace data on success — never let an error body clobber good data.
+      if (res.ok && json && Array.isArray(json.entries)) {
+        setData(json);
+      }
+      // non-OK (e.g. DB down) or bad shape: keep previous data, don't crash
+    } catch {
+      // network failure: keep previous data, don't crash
+    } finally {
+      setLoading(false);
+    }
   }, [search, psidFilter, gdFilter, vehicleFilter, statusFilter, customsFilter]);
 
   useEffect(() => {
@@ -372,7 +381,7 @@ export default function Dashboard() {
           <AlertsView alerts={alerts} />
         )}
         <p className="mt-3 text-xs text-slate-400">
-          Showing {data?.entries.length ?? 0} of {data?.totalUnfiltered ?? 0} entries · storage: {data?.mode ?? "..."}
+          Showing {data?.entries?.length ?? 0} of {data?.totalUnfiltered ?? 0} entries · storage: {data?.mode ?? "..."}
         </p>
       </section>
     </div>
