@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link
                 key={n.href}
                 href={n.href}
-                className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-indigo-600 hover:bg-indigo-600 hover:text-white"
                 title={n.hint}
               >
                 {n.label}
