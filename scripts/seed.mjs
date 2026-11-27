@@ -4,6 +4,11 @@
 
 import mongoose from "mongoose";
 
+// load env files for standalone node usage (Next.js does this for the app itself)
+for (const f of [".env.local", ".env"]) {
+  try { process.loadEnvFile?.(f); } catch { /* file absent — fine */ }
+}
+
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || "";
 
 const DEMO_PROOF = "https://res.cloudinary.com/demo/image/upload/sample.jpg";
