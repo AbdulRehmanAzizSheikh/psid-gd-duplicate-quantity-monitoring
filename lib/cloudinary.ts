@@ -15,9 +15,21 @@ function clean(v: string | undefined): string {
   return s;
 }
 
-const CLOUD_NAME = clean(process.env.CLOUDINARY_CLOUD_NAME);
-const API_KEY = clean(process.env.CLOUDINARY_API_KEY);
-const API_SECRET = clean(process.env.CLOUDINARY_API_SECRET);
+let CLOUD_NAME = clean(process.env.CLOUDINARY_CLOUD_NAME);
+let API_KEY = clean(process.env.CLOUDINARY_API_KEY);
+let API_SECRET = clean(process.env.CLOUDINARY_API_SECRET);
+
+// Support the CLOUDINARY_URL format shown in the Cloudinary dashboard:
+//   cloudinary://<api_key>:<api_secret>@<cloud_name>
+const CLOUDINARY_URL = clean(process.env.CLOUDINARY_URL);
+if (CLOUDINARY_URL) {
+  try {
+    const u = new URL(CLOUDINARY_URL);
+    CLOUD_NAME = CLOUD_NAME || u.host;
+    API_KEY = API_KEY || decodeURIComponent(u.username);
+    API_SECRET = API_SECRET || decodeURIComponent(u.password);
+  } catch { /* malformed CLOUDINARY_URL — ignore */ }
+}
 
 if (CLOUD_NAME && API_KEY && API_SECRET) {
   cloudinary.config({
