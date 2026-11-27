@@ -1,8 +1,7 @@
 import mongoose from "mongoose";
 
-// MongoDB connection with graceful fallback:
-// If MONGODB_URI is not configured (or connection fails), the app keeps working
-// in "memory mode" with seed/sample data — nothing breaks during local testing.
+// MongoDB connection — REAL database only. Nothing runs locally / no in-memory fallback.
+// MONGODB_URI is required. Connection failures surface as errors (no silent fallback).
 
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || "";
 
@@ -17,24 +16,19 @@ export function isMongoAvailable(): boolean {
   return mongoAvailable;
 }
 
-export async function connectDb(): Promise<typeof mongoose | null> {
-  if (!MONGODB_URI) return null;
+export async function connectDb(): Promise<typeof mongoose> {
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is not configured. MongoDB is required; no local/in-memory fallback is used.");
+  }
   if (mongoose.connection.readyState === 1) {
     mongoAvailable = true;
     return mongoose;
   }
   if (!cached) {
     cached = mongoose
-      .connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 5000,
-        bufferCommands: false,
-      })
-      .then((m) => {
-        mongoAvailable = true;
-        return m;
-      })
+      .connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000, bufferCommands: false })
+      .then((m) => { mongoAvailable = true; return m; })
       .catch((err) => {
-        console.error("[db] MongoDB connection failed, falling back to memory mode:", err?.message ?? err);
         mongoAvailable = false;
         cached = null; // allow retry on next request
         throw err;
@@ -42,7 +36,7 @@ export async function connectDb(): Promise<typeof mongoose | null> {
   }
   try {
     return await cached;
-  } catch {
-    return null;
+  } catch (err) {
+    throw new Error(`MongoDB connection failed: ${(err as Error).message}`);
   }
 }

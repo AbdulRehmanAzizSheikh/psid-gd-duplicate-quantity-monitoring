@@ -19,7 +19,7 @@ interface FetchResult {
   groups: GroupSummary[];
   kpis: KpiStats;
   totalUnfiltered: number;
-  mode: "mongodb" | "memory";
+  mode: "mongodb";
 }
 
 const EMPTY_FORM = {
@@ -216,10 +216,10 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-2">
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${health?.mongoAvailable ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
-            {health?.mongoAvailable ? "MongoDB connected" : "Demo memory mode"}
+            {health?.mongoAvailable ? "MongoDB connected" : "MongoDB offline"}
           </span>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${health?.cloudinaryConfigured ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
-            {health?.cloudinaryConfigured ? "Cloudinary on" : "Cloudinary off (local fallback)"}
+            {health?.cloudinaryConfigured ? "Cloudinary on" : "Cloudinary off"}
           </span>
           <button onClick={handleSeed} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-slate-50">
             Reset sample data

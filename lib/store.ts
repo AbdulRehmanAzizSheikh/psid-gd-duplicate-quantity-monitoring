@@ -1,78 +1,48 @@
 import { connectDb, isMongoAvailable } from "./db";
 import { EntryModel } from "./models/Entry";
 import { Entry, EntryInput } from "./types";
-import * as mem from "./memoryStore";
 
-// Data-access layer: MongoDB when available, in-memory seed store otherwise.
+// Data-access layer — MongoDB only. No local/in-memory storage.
 
-export async function storageMode(): Promise<"mongodb" | "memory"> {
-  const m = await connectDb();
-  return m && isMongoAvailable() ? "mongodb" : "memory";
+export async function storageMode(): Promise<"mongodb"> {
+  await connectDb();
+  return "mongodb";
 }
 
 export async function listEntries(): Promise<Entry[]> {
-  const m = await connectDb();
-  if (m && isMongoAvailable()) {
-    try {
-      const docs = await EntryModel.find({}).sort({ occurredAt: 1 }).lean();
-      return docs.map(docToEntry);
-    } catch (err) {
-      console.error("[store] Mongo read failed, using memory:", (err as Error)?.message);
-    }
-  }
-  return mem.memList();
+  await connectDb();
+  const docs = await EntryModel.find({}).sort({ occurredAt: 1 }).lean();
+  return docs.map(docToEntry);
 }
 
 export async function addEntry(input: EntryInput): Promise<Entry> {
+  await connectDb();
   const now = new Date().toISOString();
   const record = {
     ...input,
     customPaidProofUrl: input.customPaidProofUrl ?? "",
     occurredAt: input.occurredAt ? new Date(input.occurredAt).toISOString() : now,
   };
-  const m = await connectDb();
-  if (m && isMongoAvailable()) {
-    try {
-      const doc = await EntryModel.create(record);
-      return docToEntry(doc.toObject());
-    } catch (err) {
-      console.error("[store] Mongo write failed, using memory:", (err as Error)?.message);
-    }
-  }
-  return mem.memAdd({ ...record, createdAt: now });
+  const doc = await EntryModel.create(record);
+  return docToEntry(doc.toObject());
 }
 
 export async function removeEntry(id: string): Promise<boolean> {
-  const m = await connectDb();
-  if (m && isMongoAvailable()) {
-    try {
-      const res = await EntryModel.findByIdAndDelete(id);
-      return Boolean(res);
-    } catch {
-      // fall through to memory
-    }
-  }
-  return mem.memRemove(id);
+  await connectDb();
+  const res = await EntryModel.findByIdAndDelete(id);
+  return Boolean(res);
 }
 
 export async function reseed(): Promise<number> {
+  await connectDb();
   const { buildSeedEntries } = await import("./seed");
-  const m = await connectDb();
-  if (m && isMongoAvailable()) {
-    try {
-      await EntryModel.deleteMany({});
-      const seeds = buildSeedEntries().map((e) => {
-        const { id, ...rest } = e;
-        return { ...rest, occurredAt: new Date(e.occurredAt), createdAt: new Date(e.createdAt) };
-      });
-      await EntryModel.insertMany(seeds);
-      return seeds.length;
-    } catch (err) {
-      console.error("[store] Mongo seed failed, seeding memory:", (err as Error)?.message);
-    }
-  }
-  mem.memReseed();
-  return mem.memList().length;
+  await EntryModel.deleteMany({});
+  const seeds = buildSeedEntries().map((e) => {
+    const { id, ...rest } = e;
+    return { ...rest, occurredAt: new Date(e.occurredAt), createdAt: new Date(e.createdAt) };
+  });
+  await EntryModel.insertMany(seeds);
+  return seeds.length;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,3 +68,5 @@ function docToEntry(doc: any): Entry {
     createdAt: new Date(doc.createdAt ?? Date.now()).toISOString(),
   };
 }
+
+export { isMongoAvailable };

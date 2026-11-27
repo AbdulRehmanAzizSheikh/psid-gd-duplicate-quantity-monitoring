@@ -29,8 +29,8 @@ npm run dev                  # http://localhost:3000
 npm run seed                 # optional: seed MongoDB with sample data
 npm run build && npm start   # production`}</Code>
         <p className="text-sm text-slate-600">
-          <b>Everything works with no env vars.</b> Without <code>MONGODB_URI</code> the app uses an in-memory store seeded with
-          sample data; without Cloudinary keys, proof uploads fall back to local <code>uploads-local/</code> storage served by <code>/api/local-proof</code>. Pages:
+          <b>Real infrastructure required.</b> <code>MONGODB_URI</code> (MongoDB Atlas) and <code>CLOUDINARY_*</code> keys are
+          required; nothing runs locally or in-memory, no local uploads. Seed MongoDB with <code>npm run seed</code>. Pages:
           <code> /</code>, <code>/flow</code>, <code>/flow/dev</code>. Health: <code>GET /api/health</code>.
         </p>
       </S>
@@ -64,10 +64,10 @@ npm run build && npm start   # production`}</Code>
 Shared pure logic: lib/quantity.ts  (analyzeEntries, summarizeGroups, computeKpis)
    used identically server-side (API) and client-side (interactive /flow sandbox).
 
-Graceful fallbacks:
-   no MONGODB_URI        → lib/memoryStore.ts (in-memory, seeded, survives HMR)
-   Mongo connect fails   → automatic in-memory fallback, app keeps working
-   no CLOUDINARY_* keys  → local uploads-local/ fallback served by /api/local-proof, URL saved the same way`}</Code>
+No local fallbacks:
+   no MONGODB_URI        → error (MongoDB required)
+   Mongo connect fails   → clear error; no in-memory fallback
+   no CLOUDINARY_* keys  → upload error (Cloudinary required); nothing stored locally`}</Code>
         <p className="mt-3 text-sm text-slate-600">
           Layering: <b>UI → API routes → data layer (lib/store.ts) → MongoDB + Cloudinary</b>. The business rules
           (duplicates + quantity) live in one pure module so API responses, the dashboard, the alerts view and the
@@ -158,7 +158,7 @@ remaining = approved - total ; exceedsBy = max(0, total - approved)`}</Code>
           <li>Server: <code>cloudinary.uploader.upload_stream</code> → folder <code>psid-gd-proofs</code> (env <code>CLOUDINARY_FOLDER</code>); resource_type image | raw (PDF); <code>secure: true</code>.</li>
           <li>Response <code>{`{ url: secure_url, publicId, resourceType, format, provider }`}</code> → client attaches <code>customPaidProofUrl</code> (+metadata) to the entry.</li>
           <li><code>POST /api/entries</code> persists the URL + public_id in MongoDB. UI renders a clickable <b>proof</b> link; <code>GET /api/upload</code> reports backend status.</li>
-          <li>Fallback: no <code>CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET</code> → file written to <code>uploads-local/</code>, served at <code>/api/local-proof/...</code>, provider <code>local</code>. Schema identical; swapping providers changes nothing downstream.</li>
+          <li>Cloudinary keys are required; no local storage fallback.</li>
         </ol>
       </S>
 
@@ -196,8 +196,8 @@ app/api/**/route.ts       route handlers (App Router, Next 16)`}</Code>
         <p className="text-sm text-slate-600">
           <code>lib/seed.ts</code> → <code>SEED_ENTRIES</code>: realistic customs scenarios — 1000 KG exactly complete (3 vehicles),
           1100 LTR over-quantity + late 4th vehicle, 490/500 PCS near-limit, duplicate vehicle across PSIDs, duplicate PSID
-          under another GD, GD-only entry, mixed units, PAID/UNPAID/PARTIAL, demo proof URLs. Auto-seeded in memory mode;
-          MongoDB mode seeds via <code>npm run seed</code> or <code>POST /api/seed</code> (and the dashboard "Reset sample data" button).
+          under another GD, GD-only entry, mixed units, PAID/UNPAID/PARTIAL, demo proof URLs.
+          Seed MongoDB via <code>npm run seed</code> or <code>POST /api/seed</code> (and the dashboard "Reset sample data" button).
         </p>
       </S>
 
@@ -247,7 +247,7 @@ app/api/**/route.ts       route handlers (App Router, Next 16)`}</Code>
           <li><b>Deleting entries:</b> totals recomputed from remaining documents; nothing cached.</li>
           <li><b>Concurrency:</b> two vehicles saved simultaneously — append-only + recompute-on-read is safe; production: Mongo transactions / atomic <code>$inc</code> + unique indexes for hard duplicate prevention.</li>
           <li><b>Time:</b> server-stamped UTC ISO; client timezone only for display.</li>
-          <li><b>No DB configured:</b> memory mode seeded; no Cloudinary: local uploads; <code>/api/health</code> exposes which.</li>
+          <li><b>No DB / no Cloudinary:</b> clear errors (no local fallbacks); <code>/api/health</code> reports <code>ok/mongoAvailable/cloudinaryConfigured</code>.</li>
         </ul>
       </S>
 
@@ -285,7 +285,7 @@ const RTM: RtmRow[] = [
   { id: "R6", req: "MongoDB for database storage (Mongoose or official driver).", status: "COVERED", why: "Document store fits per-vehicle append-only entries + flexible proof metadata.", how: "Mongoose model db.entries; cached connection; connectDb(); data layer lib/store.ts.", where: "lib/db.ts, lib/models/Entry.ts, lib/store.ts" },
   { id: "R7", req: "Cloudinary for storing + linking custom-paid proof images/documents; secure URLs saved in MongoDB.", status: "COVERED", why: "Scalable media storage; auditable proof; DB stays light.", how: "upload_stream→secure_url; customPaidProofUrl+public_id persisted; clickable link. Local fallback when unconfigured.", where: "lib/cloudinary.ts, app/api/upload/route.ts" },
   { id: "R8", req: "API route handlers.", status: "COVERED", why: "Clean UI→server separation; reusable REST.", how: "GET/POST/DELETE route.ts handlers under app/api.", where: "app/api/**" },
-  { id: "R9", req: "Graceful fallback / seed data if env vars aren't configured; works out of the box.", status: "COVERED", why: "Smooth local testing & demo; no hard failure.", how: "No MONGODB_URI→memory store seeded; Mongo error→fallback; no Cloudinary→local uploads; seed + POST /api/seed + npm run seed; 'Reset sample data'.", where: "lib/memoryStore.ts, lib/seed.ts, lib/db.ts, lib/cloudinary.ts, app/api/seed, scripts/seed.mjs" },
+  { id: "R9", req: "Graceful fallback / seed data if env vars aren't configured; works out of the box.", status: "COVERED", why: "Smooth local testing & demo; no hard failure.", how: "No MONGODB_URI→memory store seeded; Mongo error→fallback; no Cloudinary→local uploads; seed + POST /api/seed + npm run seed; 'Reset sample data'.", where: "lib/seed.ts, lib/db.ts, lib/cloudinary.ts, app/api/seed, scripts/seed.mjs" },
 
   // Business rule 1 — quantity
   { id: "B1", req: "Single PSID or GD with Approved Quantity (e.g. 1000 KG) fulfilled across multiple vehicles (3,4,5,10+); units KG, LTR, PCS, Box, Carton, etc.", status: "COVERED", why: "Real loads arrive in multiple trucks; unit-agnostic.", how: "Group key PSID→GD; append-only vehicle docs; unit field; UNITS list.", where: "lib/quantity.ts, lib/types.ts" },

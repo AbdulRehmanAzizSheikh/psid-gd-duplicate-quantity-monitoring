@@ -34,7 +34,7 @@ const SEED = [
 
 async function main() {
   if (!MONGODB_URI) {
-    console.log("MONGODB_URI not set — nothing to seed. App will run in memory mode with sample data.");
+    console.error("MONGODB_URI not set — MongoDB is required. Nothing seeded."); process.exit(1);
     return;
   }
   await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 8000 });

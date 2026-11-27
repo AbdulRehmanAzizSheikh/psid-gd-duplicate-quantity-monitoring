@@ -1,18 +1,26 @@
 import { NextResponse, connection } from "next/server";
 import { connectDb, isMongoAvailable, isMongoConfigured } from "@/lib/db";
 import { isCloudinaryConfigured } from "@/lib/cloudinary";
-import { storageMode } from "@/lib/store";
 
-
-// GET /api/health — report backend status for the demo UI.
+// GET /api/health — honest backend status. ok=false if MongoDB isn't reachable.
 export async function GET() {
   await connection(); // force request-time rendering (no prerendering)
-  await connectDb();
+
+  let connected = false;
+  let error: string | null = null;
+  try {
+    await connectDb();
+    connected = true;
+  } catch (e) {
+    error = (e as Error).message;
+  }
+
   return NextResponse.json({
-    ok: true,
+    ok: connected,
     mongoConfigured: isMongoConfigured(),
-    mongoAvailable: isMongoAvailable(),
+    mongoAvailable: connected && isMongoAvailable(),
     cloudinaryConfigured: isCloudinaryConfigured(),
-    mode: await storageMode(),
+    mode: "mongodb",
+    error,
   });
 }

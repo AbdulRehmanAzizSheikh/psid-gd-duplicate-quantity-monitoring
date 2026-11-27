@@ -114,5 +114,5 @@ export interface KpiStats {
   customsPaidCount: number;
   customsUnpaidCount: number;
   proofCount: number; // entries with a proof URL
-  mode: "mongodb" | "memory"; // storage backend in use
+  mode: "mongodb"; // storage backend in use
 }

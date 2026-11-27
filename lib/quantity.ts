@@ -210,7 +210,7 @@ export function analyzeEntries(entries: Entry[]): AnalyzedEntry[] {
   });
 }
 
-export function computeKpis(entries: AnalyzedEntry[], mode: "mongodb" | "memory"): KpiStats {
+export function computeKpis(entries: AnalyzedEntry[], mode: "mongodb"): KpiStats {
   const groups = summarizeGroups(entries);
   const psids = new Set(entries.map((e) => norm(e.psidNumber)).filter(Boolean));
   const gds = new Set(entries.map((e) => norm(e.gdNumber)).filter(Boolean));

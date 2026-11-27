@@ -4,8 +4,7 @@ A clean, working **demo web application** for customs PSID & GD duplicate detect
 monitoring** — built with **Next.js (App Router)**, **Tailwind CSS**, **MongoDB** (Mongoose), and **Cloudinary**
 (for custom-paid proof images/documents).
 
-It works **out of the box with zero configuration**: no MongoDB and no Cloudinary keys needed. Without env vars it
-runs in *memory mode* with realistic **seed/sample data**, and proof uploads fall back to local storage.
+**Real infrastructure only:** nothing runs locally or in-memory. **MongoDB** (`MONGODB_URI`, e.g. Atlas) and **Cloudinary** keys are **required**. Seed MongoDB with `npm run seed`; proof uploads always go to **Cloudinary**.
 
 ---
 
@@ -13,7 +12,7 @@ runs in *memory mode* with realistic **seed/sample data**, and proof uploads fal
 
 ```bash
 npm install
-cp .env.example .env.local   # optional — fill MongoDB + Cloudinary to enable them
+cp .env.example .env.local   # REQUIRED — fill MongoDB + Cloudinary
 npm run dev                  # http://localhost:3000
 ```
 
@@ -23,7 +22,7 @@ Production:
 npm run build && npm start
 ```
 
-Seed MongoDB (optional; app also seeds itself + "Reset sample data" button + `POST /api/seed`):
+Seed MongoDB (sample data; also "Reset sample data" button + `POST /api/seed`):
 
 ```bash
 npm run seed                 # reads MONGODB_URI
@@ -57,8 +56,8 @@ All three are linked from the top navigation bar. API docs are on `/flow/dev`.
 
 - **Next.js 16 App Router** + React 19 + TypeScript; route handlers under `app/api/**`
 - **Tailwind CSS v4**
-- **MongoDB** via **Mongoose** (`lib/models/Entry.ts`, `lib/db.ts`, `lib/store.ts`); **memory fallback** (`lib/memoryStore.ts`)
-- **Cloudinary** (`lib/cloudinary.ts`, `POST /api/upload`); **local fallback** `uploads-local/` + `/api/local-proof`
+- **MongoDB** via **Mongoose** (`lib/models/Entry.ts`, `lib/db.ts`, `lib/store.ts`); **required**, no in-memory fallback
+- **Cloudinary** (`lib/cloudinary.ts`, `POST /api/upload`); **required** for proofs, no local fallback
 - Pure shared domain logic `lib/quantity.ts` (used server-side **and** client-side)
 
 ## Environment variables (`.env.example`)
@@ -68,10 +67,10 @@ MONGODB_URI=mongodb://127.0.0.1:27017/psid-gd-monitor   # or Atlas mongodb+srv:/
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
-CLOUDINARY_FOLDER=psid-gd-proofs                        # optional
+CLOUDINARY_FOLDER=psid-gd-proofs                        # optional (default: psid-gd-proofs)
 ```
 
-All optional. `GET /api/health` reports what's active.
+MongoDB + Cloudinary keys are **required**. `GET /api/health` reports what's active.
 
 ## API routes
 
@@ -84,7 +83,6 @@ GET    /api/entries/stats
 GET    /api/check-duplicate?psid&gd&vehicle&excludeId
 POST   /api/upload            (multipart 'file', ≤10MB image/PDF)
 GET    /api/upload
-GET    /api/local-proof/[name]
 POST|GET /api/seed
 GET    /api/health
 ```
@@ -98,7 +96,7 @@ app/                 pages + API route handlers (App Router)
   flow/dev/page.tsx  developer guide + RTM
   api/**/route.ts
 components/          Dashboard.tsx, ScenarioSandbox.tsx
-lib/                 quantity.ts, types.ts, db.ts, store.ts, memoryStore.ts, seed.ts, cloudinary.ts, models/Entry.ts
+lib/                 quantity.ts, types.ts, db.ts, store.ts, seed.ts, cloudinary.ts, models/Entry.ts
 scripts/seed.mjs     npm run seed
 .env.example
 ```

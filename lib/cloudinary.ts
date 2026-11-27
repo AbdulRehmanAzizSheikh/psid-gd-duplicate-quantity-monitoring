@@ -1,13 +1,11 @@
 import { v2 as cloudinary } from "cloudinary";
-import { promises as fs } from "fs";
-import path from "path";
 
-// Cloudinary upload with graceful fallback.
-// If CLOUDINARY_* env vars are not set, proof files are saved to uploads-local/
-// and served as local URLs (demo mode) so the app still works out of the box.
+// Cloudinary upload — REAL storage only. Nothing is stored locally.
+// Requires CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET
+// (or CLOUDINARY_URL=cloudinary://key:secret@cloud_name). If not configured,
+// uploads throw a clear error instead of silently storing locally.
 
-// Treat unset AND obvious template placeholders as "not configured" so a
-// half-filled .env can never silently break uploads — local fallback kicks in.
+// Treat unset AND obvious template placeholders as "not configured".
 function clean(v: string | undefined): string {
   const s = (v || "").trim();
   if (!s) return "";
@@ -45,8 +43,8 @@ export function isCloudinaryConfigured(): boolean {
 }
 
 export interface UploadResult {
-  url: string; // secure URL (Cloudinary secure_url, or local /uploads/... fallback)
-  provider: "cloudinary" | "local";
+  url: string; // Cloudinary secure_url
+  provider: "cloudinary";
   publicId: string;
   resourceType: string;
   format: string;
@@ -58,47 +56,36 @@ export async function uploadProof(
   originalName: string,
   mimeType: string
 ): Promise<UploadResult> {
-  if (isCloudinaryConfigured()) {
-    const resourceType = mimeType.startsWith("image/")
-      ? "image"
-      : mimeType === "application/pdf"
-        ? "raw"
-        : "auto";
-    const result = await new Promise<Record<string, unknown>>((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream(
-          {
-            folder: process.env.CLOUDINARY_FOLDER || "psid-gd-proofs",
-            resource_type: resourceType as "image" | "raw" | "auto",
-            use_filename: true,
-            unique_filename: true,
-          },
-          (error, res) => (error ? reject(error) : resolve((res ?? {}) as Record<string, unknown>))
-        )
-        .end(buffer);
-    });
-    return {
-      url: String(result.secure_url ?? result.url ?? ""),
-      provider: "cloudinary",
-      publicId: String(result.public_id ?? ""),
-      resourceType: String(result.resource_type ?? resourceType),
-      format: String(result.format ?? ""),
-      originalName,
-    };
+  if (!isCloudinaryConfigured()) {
+    throw new Error(
+      "Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET (or CLOUDINARY_URL). No local storage fallback is used."
+    );
   }
 
-  // ---- local fallback (demo mode) ----
-  const safeBase = (originalName || "proof").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeBase}`;
-  const uploadsDir = path.join(process.cwd(), "uploads-local");
-  await fs.mkdir(uploadsDir, { recursive: true });
-  await fs.writeFile(path.join(uploadsDir, fileName), buffer);
+  const resourceType = mimeType.startsWith("image/")
+    ? "image"
+    : mimeType === "application/pdf"
+      ? "raw"
+      : "auto";
+  const result = await new Promise<Record<string, unknown>>((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        {
+          folder: process.env.CLOUDINARY_FOLDER || "psid-gd-proofs",
+          resource_type: resourceType as "image" | "raw" | "auto",
+          use_filename: true,
+          unique_filename: true,
+        },
+        (error, res) => (error ? reject(error) : resolve((res ?? {}) as Record<string, unknown>))
+      )
+      .end(buffer);
+  });
   return {
-    url: `/api/local-proof/${fileName}`,
-    provider: "local",
-    publicId: `local/${fileName}`,
-    resourceType: mimeType.startsWith("image/") ? "image" : "raw",
-    format: path.extname(originalName).replace(".", ""),
+    url: String(result.secure_url ?? result.url ?? ""),
+    provider: "cloudinary",
+    publicId: String(result.public_id ?? ""),
+    resourceType: String(result.resource_type ?? resourceType),
+    format: String(result.format ?? ""),
     originalName,
   };
 }
