@@ -14,7 +14,6 @@ export default function FlowPage() {
         </p>
         <div className="mt-4 flex gap-2">
           <Link href="/" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Open the live demo →</Link>
-          <Link href="/flow/dev" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold hover:bg-slate-50">Developer guide</Link>
         </div>
       </header>
 

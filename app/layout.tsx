@@ -8,11 +8,7 @@ export const metadata: Metadata = {
     "Customs PSID & GD duplicate detection + multi-vehicle quantity monitoring. Next.js + Tailwind + MongoDB + Cloudinary demo.",
 };
 
-const NAV = [
-  { href: "/", label: "Dashboard", hint: "Live demo" },
-  { href: "/flow", label: "Client Flow", hint: "Presentation" },
-  { href: "/flow/dev", label: "Developer Guide", hint: "Architecture + RTM" },
-];
+const NAV = [{ href: "/flow", label: "flow", hint: "Client presentation" }];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
