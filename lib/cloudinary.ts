@@ -6,9 +6,18 @@ import path from "path";
 // If CLOUDINARY_* env vars are not set, proof files are saved to uploads-local/
 // and served as local URLs (demo mode) so the app still works out of the box.
 
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || "";
-const API_KEY = process.env.CLOUDINARY_API_KEY || "";
-const API_SECRET = process.env.CLOUDINARY_API_SECRET || "";
+// Treat unset AND obvious template placeholders as "not configured" so a
+// half-filled .env can never silently break uploads — local fallback kicks in.
+function clean(v: string | undefined): string {
+  const s = (v || "").trim();
+  if (!s) return "";
+  if (/your_|example|xxxxx|changeme|placeholder|<.*>/i.test(s)) return "";
+  return s;
+}
+
+const CLOUD_NAME = clean(process.env.CLOUDINARY_CLOUD_NAME);
+const API_KEY = clean(process.env.CLOUDINARY_API_KEY);
+const API_SECRET = clean(process.env.CLOUDINARY_API_SECRET);
 
 if (CLOUD_NAME && API_KEY && API_SECRET) {
   cloudinary.config({
